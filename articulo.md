@@ -1,4 +1,5 @@
 ## Introduction 
+![alt text](Diagrama1.jpeg)
 
 ### DynamoDB
 
@@ -20,7 +21,6 @@ DynamoDB is a fully managed NoSQL database service provided by Amazon Web Servic
 
 - **Code Example:** Below is a simple Python code snippet demonstrating how to interact with DynamoDB using the `boto3` library to create a table and add an item.
 
-![alt text](Diagrama1.png)
 - Here we have the compiled code and the generated graphics.
 
 ![Image description](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/emfbnr5oy5lfd6sf0rnw.png)
