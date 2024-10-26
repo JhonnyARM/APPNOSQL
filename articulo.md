@@ -22,97 +22,55 @@ DynamoDB is a fully managed NoSQL database service provided by Amazon Web Servic
 - **Code Example:** Below is a simple Python code snippet demonstrating how to interact with DynamoDB using the `boto3` library to create a table and add an item.
 
 - Here we have the compiled code and the generated graphics.
+### Code Example
 
-![Image description](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/emfbnr5oy5lfd6sf0rnw.png)
-## Creating a dashboard with BOKEH in python
-### Requirements:
-- Python
-- Visual Studio Code
-### First steps
-- Open visual studio code
+Below is a simple Python code snippet demonstrating how to interact with DynamoDB using the `boto3` library to create a table and add an item.
 
-![Image description](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/bipsbnhguwq9tnjp19nc.png)
-- We create a working environment and add a .py file
+```python
+import boto3
 
-![Image description](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/023vjfcpnhilrj4b5m0c.png)
-- Important, to make this dashboard it is necessary to install the dependencies, for this we open a console in administrator mode and we execute
-```bash
-pip install bokeh
-```
+# Initialize a session using Amazon DynamoDB
+session = boto3.Session(
+    aws_access_key_id='YOUR_ACCESS_KEY',
+    aws_secret_access_key='YOUR_SECRET_KEY',
+    region_name='us-west-2'  # Change to your region
+)
 
-![Image description](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/f59ek97fqwzy9vwxhjly.png)
-- Once installed, run the sample code to generate graphics.
+# Initialize DynamoDB resource
+dynamodb = session.resource('dynamodb')
 
-![Image description](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/4qmkdiqt1k48h504u8y6.png)
-As we can see we have the panda and bokeh packages imported.
+# Create a new table
+table = dynamodb.create_table(
+    TableName='MyTable',
+    KeySchema=[
+        {
+            'AttributeName': 'id',
+            'KeyType': 'HASH'  # Partition key
+        }
+    ],
+    AttributeDefinitions=[
+        {
+            'AttributeName': 'id',
+            'AttributeType': 'S'  # String type
+        }
+    ],
+    ProvisionedThroughput={
+        'ReadCapacityUnits': 5,
+        'WriteCapacityUnits': 5
+    }
+)
 
-### Last step
-- Run the project.
-To run the project we will open the console and paste the following code:
-```bash
-python -m bokeh serve --show dashboard.py
-```
-this will show the dashboard on a local page.
+# Wait until the table exists
+table.meta.client.get_waiter('table_exists').wait(TableName='MyTable')
 
+print("Table created successfully!")
 
-![Image description](https://dev-to-uploads.s3.amazonaws.com/uploads/articles/d20b8b0h3x3cv1oy8z20.png)
-
-## Deploy the project in the cloud
-
-### To deploy the project it is necessary to have a cloud service provider, in this case I used a debian VPS.
-### to install python in linux
-
-```bash
-apt update
-```
-
-```bash
-apt install python3
-```
-
-### install the environment
-
-```bash
-sudo apt install python3-venv
-mkdir my_project
-cd my_project
-python3 -m venv my_env
-pip install bokeh
-```
-
-### Make my_env permanent:
-
-```bash
-
-nano ~/.bashrc
-```
-
-copy and past at the end:
-
-```bash
-
-source /ruta/a/my_env/bin/activate
-```
-
-in my case it was: 
-
-```bash
-source /opt/dashboardpy/my_env/bin/activate
-```
-
-ctrl+o ENTER ctrl+x
-
-with "source" you're activating bashrc
-
-```bash
-
-source ~/.bashrc
-```
-
-### Permanent configuration of the project
-
-finally we make the created websocket permanent, that is to say, it does not close when closing putty, now we create a nohup that will always be executed:
-```bash
-nohup python -m bokeh serve --show dashboard.py &
-```
+# Add an item to the table
+table.put_item(
+    Item={
+        'id': '123',
+        'name': 'Sample Item',
+        'description': 'This is a sample item.'
+    }
+)
 
