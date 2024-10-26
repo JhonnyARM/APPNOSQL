@@ -1,0 +1,26 @@
+version: '3.8'
+services:
+  dynamodb-local:
+    image: "amazon/dynamodb-local:latest"
+    container_name: dynamodb-local
+    command: "-jar DynamoDBLocal.jar -sharedDb -dbPath ./data"
+    ports:
+      - "8000:8000"
+    volumes:
+      - "./docker/dynamodb:/home/dynamodblocal/data"
+    working_dir: /home/dynamodblocal
+
+  app-python:
+    build:
+      context: .
+      dockerfile: Dockerfile  # Dockerfile en la raíz del proyecto
+    container_name: app-python
+    depends_on:
+      - dynamodb-local
+    environment:
+      AWS_ACCESS_KEY_ID: 'DUMMYIDEXAMPLE'
+      AWS_SECRET_ACCESS_KEY: 'DUMMYEXAMPLEKEY'
+    ports:
+      - "8080:8080"
+    command: >
+      sh -c "pip install boto3 flask && python app.py"

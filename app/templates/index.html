@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Lista de Elementos</title>
+</head>
+<body>
+    <h1>Elementos en DynamoDB</h1>
+    <a href="{{ url_for('add_item') }}">Agregar nuevo elemento</a>
+    <ul>
+        {% for item in items %}
+            <li>{{ item['id'] }} - {{ item['nombre'] }}: {{ item['valor'] }}</li>
+        {% endfor %}
+    </ul>
+</body>
+</html>

@@ -19,58 +19,198 @@ DynamoDB is a fully managed NoSQL database service provided by Amazon Web Servic
 
 - **Security and Compliance:** It provides built-in security features, including encryption at rest and in transit, and supports AWS Identity and Access Management (IAM) for fine-grained access control.
 
-- **Code Example:** Below is a simple Python code snippet demonstrating how to interact with DynamoDB using the `boto3` library to create a table and add an item.
 
-- Here we have the compiled code and the generated graphics.
+### Running Local DynamoDB
+We have to go to this URL and download the zip
+https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/DynamoDBLocal.DownloadingAndRunning.html
+
+After you download the archive, extract the contents and copy the extracted directory to a location of your choice.
+![alt text](image.png)
+To start DynamoDB on your computer, open a command prompt window, navigate to the directory where you extracted DynamoDBLocal.jar, and enter the following command.
+```bash
+java -Djava.library.path=./DynamoDBLocal_lib -jar DynamoDBLocal.jar -sharedDb
+```
+![alt text](image-1.png)
+
 ### Code Example
+Now we are going to test a simple web application, using python and boto3 libraries with flask.
 
-Below is a simple Python code snippet demonstrating how to interact with DynamoDB using the `boto3` library to create a table and add an item.
+#### Requirements
+- Python
+- Boto3, Flask
+- Docker
+- DynamoDBLocal files
+#### Python Code
+- Project structure
+
+```
+EjemploDynamoDB/
+└── app/
+│    ├── templates/
+│    │   ├── index.html
+│    │   └── add_item.html
+│    ├── app.py
+└── docker-compose.yml
+└── Dockerfile
+
+```
+
 
 ```python
+from flask import Flask, render_template, request, redirect, url_for
 import boto3
+from botocore.exceptions import ClientError
 
-# Initialize a session using Amazon DynamoDB
-session = boto3.Session(
-    aws_access_key_id='YOUR_ACCESS_KEY',
-    aws_secret_access_key='YOUR_SECRET_KEY',
-    region_name='us-west-2'  # Change to your region
+app = Flask(__name__)
+
+
+dynamodb = boto3.resource(
+    'dynamodb',
+    endpoint_url="http://dynamodb-local:8000",
+    region_name="us-west-2",
+    aws_access_key_id="DUMMYIDEXAMPLE",
+    aws_secret_access_key="DUMMYEXAMPLEKEY"
 )
 
-# Initialize DynamoDB resource
-dynamodb = session.resource('dynamodb')
+table_name = "TestTable"
 
-# Create a new table
-table = dynamodb.create_table(
-    TableName='MyTable',
-    KeySchema=[
-        {
-            'AttributeName': 'id',
-            'KeyType': 'HASH'  # Partition key
-        }
-    ],
-    AttributeDefinitions=[
-        {
-            'AttributeName': 'id',
-            'AttributeType': 'S'  # String type
-        }
-    ],
-    ProvisionedThroughput={
-        'ReadCapacityUnits': 5,
-        'WriteCapacityUnits': 5
-    }
-)
 
-# Wait until the table exists
-table.meta.client.get_waiter('table_exists').wait(TableName='MyTable')
+@app.route('/')
+def index():
+    table = dynamodb.Table(table_name)
+    try:
+        response = table.scan()
+        items = response.get('Items', [])
+        return render_template('index.html', items=items)
+    except ClientError as e:
+        return f"Error: {e}"
 
-print("Table created successfully!")
 
-# Add an item to the table
-table.put_item(
-    Item={
-        'id': '123',
-        'name': 'Sample Item',
-        'description': 'This is a sample item.'
-    }
-)
+@app.route('/add', methods=['GET', 'POST'])
+def add_item():
+    if request.method == 'POST':
+        id = request.form['id']
+        nombre = request.form['nombre']
+        valor = request.form['valor']
+        table = dynamodb.Table(table_name)
+        item = {'id': id, 'nombre': nombre, 'valor': valor}
+        try:
+            table.put_item(Item=item)
+            return redirect(url_for('index'))
+        except ClientError as e:
+            return f"Error: {e}"
+    return render_template('add_item.html')
 
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=8080)
+
+```
+- index.html
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Lista de Elementos</title>
+</head>
+<body>
+    <h1>Elementos en DynamoDB</h1>
+    <a href="{{ url_for('add_item') }}">Agregar nuevo elemento</a>
+    <ul>
+        {% for item in items %}
+            <li>{{ item['id'] }} - {{ item['nombre'] }}: {{ item['valor'] }}</li>
+        {% endfor %}
+    </ul>
+</body>
+</html>
+
+```
+
+- add_item.html
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Lista de Elementos</title>
+</head>
+<body>
+    <h1>Elementos en DynamoDB</h1>
+    <a href="{{ url_for('add_item') }}">Agregar nuevo elemento</a>
+    <ul>
+        {% for item in items %}
+            <li>{{ item['id'] }} - {{ item['nombre'] }}: {{ item['valor'] }}</li>
+        {% endfor %}
+    </ul>
+</body>
+</html>
+
+```
+- dockerfile
+```dockerfile
+
+FROM python:3.9-slim
+
+
+WORKDIR /app
+
+
+COPY app/app.py /app/app.py
+COPY app/templates /app/templates
+
+
+RUN pip install boto3 flask
+
+
+CMD ["python", "app.py"]
+
+
+```
+
+
+- dockerfile
+```bash
+
+version: '3.8'
+services:
+  dynamodb-local:
+    image: "amazon/dynamodb-local:latest"
+    container_name: dynamodb-local
+    command: "-jar DynamoDBLocal.jar -sharedDb -dbPath ./data"
+    ports:
+      - "8000:8000"
+    volumes:
+      - "./docker/dynamodb:/home/dynamodblocal/data"
+    working_dir: /home/dynamodblocal
+
+  app-python:
+    build:
+      context: .
+      dockerfile: Dockerfile  # Dockerfile en la raíz del proyecto
+    container_name: app-python
+    depends_on:
+      - dynamodb-local
+    environment:
+      AWS_ACCESS_KEY_ID: 'DUMMYIDEXAMPLE'
+      AWS_SECRET_ACCESS_KEY: 'DUMMYEXAMPLEKEY'
+    ports:
+      - "8080:8080"
+    command: >
+      sh -c "pip install boto3 flask && python app.py"
+
+
+
+```
+
+### Run Docker Compose
+In the console run the following command.
+```bash
+docker-compose up -d --build
+
+```
+
+## Results
+![alt text](image-5.png)
+![alt text](image-2.png)
+![alt text](image-3.png)
+![alt text](image-4.png)
